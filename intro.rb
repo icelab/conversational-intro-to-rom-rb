@@ -205,8 +205,8 @@ puts first_article.inspect
 puts "\nPublished articles?"
 puts repo.published.inspect
 
-# But we can find it by ID, because we've build our our repo's `#[]` method to
-# finds article regardless of published status.
+# But we can find it by ID, because we've built our repo's `#[]` method to
+# find an article regardless of published status.
 #
 # ```ruby
 # repo[first_article.id]
