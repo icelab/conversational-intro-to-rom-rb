@@ -215,7 +215,7 @@ results from our database table. We’ll use them in a moment.</p>
               </div>
               <h3 id="repositories">Repositories</h3>
 <p>Now, let’s define a <strong>Repository</strong>. Repositories are the primary persistence
-interfaces in our app. Responsitories contribute a couple of important things
+interfaces in our app. Repositories contribute a couple of important things
 to a well-designed app:</p>
 <ol>
 <li>They hide low-level persistence details, ensuring the rest of our app
@@ -456,8 +456,8 @@ puts repo.published.inspect</pre></div></div>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-23">&#182;</a>
               </div>
-              <p>But we can find it by ID, because we’ve build our our repo’s <code>#[]</code> method to
-finds article regardless of published status.</p>
+              <p>But we can find it by ID, because we’ve built our repo’s <code>#[]</code> method to
+find an article regardless of published status.</p>
 <pre><code class="lang-ruby">repo[first_article.id]
 <span class="hljs-comment"># =&gt; #&lt;ROM::Struct[Article] id=1 title="Hello rom-rb" published=false&gt;</span>
 </code></pre>
