@@ -1,0 +1,103 @@
+GIT
+  remote: git://github.com/rom-rb/rom-mapper.git
+  revision: 386ad7049b9c46243889453d4bce7b44d05962e4
+  specs:
+    rom-mapper (0.3.0)
+      dry-equalizer (~> 0.2)
+      rom-support (~> 1.0.0)
+      transproc (~> 0.4.0)
+
+GIT
+  remote: git://github.com/rom-rb/rom-repository.git
+  revision: 37ec20210a66da4e4c36b2b72517743cc1776930
+  specs:
+    rom-repository (0.3.0)
+      anima (~> 0.2, >= 0.2)
+      concurrent-ruby (~> 1.0)
+      rom (~> 2.0)
+      rom-mapper (~> 0.3.0)
+      rom-support (~> 1.0.0)
+
+GIT
+  remote: git://github.com/rom-rb/rom-sql.git
+  revision: b9f75ee553a8bf74b78175181e8531c5684d3848
+  specs:
+    rom-sql (0.8.0)
+      dry-equalizer (~> 0.2)
+      dry-types (~> 0.7)
+      rom (~> 2.0)
+      sequel (~> 4.18)
+
+GIT
+  remote: git://github.com/rom-rb/rom-support.git
+  revision: 31085bb9a02a68455f2a66dce1fa08fcfd937430
+  specs:
+    rom-support (1.0.0)
+      dry-equalizer (~> 0.2)
+      transproc (~> 0.4.0)
+      wisper (~> 1.6, >= 1.6.0)
+
+GIT
+  remote: git://github.com/rom-rb/rom.git
+  revision: 9b30e3b516be12224148434c75ae1d9223fbfccb
+  specs:
+    rom (2.0.0)
+      dry-equalizer (~> 0.2)
+      dry-types (~> 0.7)
+      rom-mapper (~> 0.3.0)
+      rom-support (~> 1.0.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    abstract_type (0.0.7)
+    adamantium (0.2.0)
+      ice_nine (~> 0.11.0)
+      memoizable (~> 0.4.0)
+    anima (0.3.0)
+      abstract_type (~> 0.0.7)
+      adamantium (~> 0.2)
+      equalizer (~> 0.0.11)
+    concurrent-ruby (1.0.2)
+    dry-configurable (0.1.6)
+      concurrent-ruby (~> 1.0)
+    dry-container (0.3.4)
+      concurrent-ruby (~> 1.0)
+      dry-configurable (~> 0.1, >= 0.1.3)
+    dry-equalizer (0.2.0)
+    dry-logic (0.2.3)
+      dry-container (~> 0.2, >= 0.2.6)
+      dry-equalizer (~> 0.2)
+    dry-monads (0.0.1)
+    dry-types (0.7.2)
+      concurrent-ruby (~> 1.0)
+      dry-configurable (~> 0.1)
+      dry-container (~> 0.3)
+      dry-equalizer (~> 0.2)
+      dry-logic (~> 0.2, >= 0.2.3)
+      dry-monads (>= 0.0.1)
+      inflecto (~> 0.0.0, >= 0.0.2)
+    equalizer (0.0.11)
+    ice_nine (0.11.2)
+    inflecto (0.0.2)
+    memoizable (0.4.2)
+      thread_safe (~> 0.3, >= 0.3.1)
+    sequel (4.35.0)
+    sqlite3 (1.3.11)
+    thread_safe (0.3.5)
+    transproc (0.4.0)
+    wisper (1.6.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  rom!
+  rom-mapper!
+  rom-repository!
+  rom-sql!
+  rom-support!
+  sqlite3
+
+BUNDLED WITH
+   1.12.3
