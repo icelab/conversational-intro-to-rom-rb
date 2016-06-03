@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>A conversational introduction to rom-rb</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-comment">#!/usr/bin/env ruby</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <h1 id="a-conversational-introduction-to-rom-rb">A conversational introduction to rom-rb</h1>
+<p><em><a href="https://github.com/icelab/conversational-intro-to-rom-rb">View the source</a></em> · <em><a href="http://icelab.com.au/articles/a-conversational-introduction-to-rom-rb/">Follow the blog</a></em> · <em><a href="http://twitter.com/timriley">Say hi on Twitter</a></em></p>
+<h3 id="persistence-matters">Persistence matters</h3>
+<p>We’ve spent a few weeks now exploring a <a href="http://icelab.com.au/articles/a-change-positive-ruby-web-application-architecture/">next-generation web app
+architecture</a> for Ruby, but we’re yet to cover one very important
+thing: <strong>database persistence</strong>.</p>
+<p>How we choose to build our app’s persistence support will have a profound
+impact on its overall design.</p>
+<p>We could follow the active record pattern and wind up with a select few
+models <a href="http://icelab.com.au/articles/inactive-records-the-value-objects-your-app-deserves/">deeply intertwined</a> with every aspect of our application’s
+functionality.</p>
+<p>Or we could build a clean separation of responsibilities and make an app
+that remains easy to change. <strong>This is where <a href="http://rom-rb.org/">rom-rb</a> can help.</strong></p>
+<h3 id="rom-rb-helps">rom-rb helps</h3>
+<p>rom-rb is a flexible persistence and data mapping toolkit for Ruby. It
+separates queries and commands and offers <a href="http://rom-rb.org/learn/introduction/philosophy/">powerful, workable
+abstractions</a> at every point between our app and the data store.
+This mean there are a few concepts to learn, but the payoff is significant:
+a persistence layer that can be perfectly tailored to our app’s needs.</p>
+<p>Let’s get started, then: follow the code and commentary below for an
+introduction to rom-rb and a playground for making your own experiments.</p>
+<hr>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <h2 id="install-the-rom-rb-gems">Install the rom-rb gems</h2>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Over in the <code>Gemfile</code>, we’re installing the rom-rb gems from their master
+branches, since we’ll be looking at some major improvements that are slated
+for release later this month.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">require</span> <span class="hljs-string">"bundler/setup"</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Require the gems we need.</p>
+<p>One thing to note here is that rom-rb is a <em>multi-adapter</em> toolkit. It
+supports many kinds of data sources (and even allows you to use them
+together!). For today, though we’ll stick to SQL. Apart from the “rom-sql”
+adapter, the only other <code>require</code> we need is “rom-repository”, which will
+act as our app’s primary persistence interface.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">require</span> <span class="hljs-string">"rom-sql"</span>
+<span class="hljs-keyword">require</span> <span class="hljs-string">"rom-repository"</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <h2 id="define-our-app-s-persistence-api">Define our app’s persistence API</h2>
+<p>In this playground, we’ll be using rom-rb to work with <em>articles</em> in our
+database.</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <h3 id="relations">Relations</h3>
+<p>The first thing we need to define is a <strong>Relation</strong>. Relations are the
+interface to a particular collection in our data source, which in SQL terms
+is either a table or a view.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">module</span> <span class="hljs-title">Relations</span></span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>This relation is for the <code>articles</code> table.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Articles</span> &lt; ROM::Relation[:<span class="hljs-title">sql</span>]</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Define a canonical schema for this relation. This will be used when we
+use commands to make changes to our data. It ensures that only
+appropriate attributes are written through to the database table.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    schema(<span class="hljs-symbol">:articles</span>) <span class="hljs-keyword">do</span>
+      attribute <span class="hljs-symbol">:id</span>, Types::Serial
+      attribute <span class="hljs-symbol">:title</span>, Types::String
+      attribute <span class="hljs-symbol">:published</span>, Types::Bool
+    <span class="hljs-keyword">end</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Define some composable, reusable query methods to return filtered
+results from our database table. We’ll use them in a moment.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">by_id</span><span class="hljs-params">(id)</span></span>
+      where(<span class="hljs-symbol">id:</span> id)
+    <span class="hljs-keyword">end</span>
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">published</span></span>
+      where(<span class="hljs-symbol">published:</span> <span class="hljs-literal">true</span>)
+    <span class="hljs-keyword">end</span>
+  <span class="hljs-keyword">end</span>
+<span class="hljs-keyword">end</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <h3 id="repositories">Repositories</h3>
+<p>Now, let’s define a <strong>Repository</strong>. Repositories are the primary persistence
+interfaces in our app. Responsitories contribute a couple of important things
+to a well-designed app:</p>
+<ol>
+<li>They hide low-level persistence details, ensuring the rest of our app
+doesn’t have any accidental or unnecessary coupling to the implementation
+details for our data source.</li>
+<li>They return objects that are appropriate for our app’s domain. The data
+for these objects may come from one or more relations, may be transformed
+into a different shape, and may be returned as objects that are designed
+to be passed around the other components in our app.</li>
+</ol>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">module</span> <span class="hljs-title">Repositories</span></span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>This simple repository uses articles as its main relation.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Articles</span> &lt; ROM::Repository[:<span class="hljs-title">articles</span>]</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Define a command to create new articles.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    commands <span class="hljs-symbol">:create</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Define methods to return the article objects we want to use within our
+app. Each of these can access the relation via <code>articles</code> and use its
+query methods.</p>
+<p>Unlike the query methods inside the relations, these ones should not be
+chainable. Their purpose is to return a set of articles for each
+distinct use case within our app. This means that our repository API
+(and therefore our persistence API in general) is a perfect reflection
+of our app’s persistence requirements.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">[]</span><span class="hljs-params">(id)</span></span>
+      articles.by_id(id).one!
+    <span class="hljs-keyword">end</span>
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">published</span></span>
+      articles.published.to_a
+    <span class="hljs-keyword">end</span>
+  <span class="hljs-keyword">end</span>
+<span class="hljs-keyword">end</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <h2 id="initialize-rom-rb">Initialize rom-rb</h2>
+<p>rom-rb is built to be non-intrusive. When we initialize it here, all our
+relations and commands are bundled into a single container that we can
+inject into our app.</p>
+<p>In any kind of framework, this setup will be taken care of for us, but
+because rom-rb is flexible, explicit setup for our playground is still nice
+and easy.</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>Configure rom-rb to use an in-memory SQLite database via its SQL adapter,
+register our articls relation, then build and finalize the persistence
+container.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>config = ROM::Configuration.new(<span class="hljs-symbol">:sql</span>, <span class="hljs-string">"sqlite::memory"</span>)
+config.register_relation Relations::Articles
+container = ROM.container(config)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <h2 id="prepare-our-database">Prepare our database</h2>
+<p>Since this is a standalone playground, run a migration to give us a database
+table to work with.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>container.gateways[<span class="hljs-symbol">:default</span>].tap <span class="hljs-keyword">do</span> <span class="hljs-params">|gateway|</span>
+  migration = gateway.migration <span class="hljs-keyword">do</span>
+    change <span class="hljs-keyword">do</span>
+      create_table <span class="hljs-symbol">:articles</span> <span class="hljs-keyword">do</span>
+        primary_key <span class="hljs-symbol">:id</span>
+        string <span class="hljs-symbol">:title</span>, <span class="hljs-symbol">null:</span> <span class="hljs-literal">false</span>
+        boolean <span class="hljs-symbol">:published</span>, <span class="hljs-symbol">null:</span> <span class="hljs-literal">false</span>, <span class="hljs-symbol">default:</span> <span class="hljs-literal">false</span>
+      <span class="hljs-keyword">end</span>
+    <span class="hljs-keyword">end</span>
+  <span class="hljs-keyword">end</span>
+  migration.apply gateway.connection, <span class="hljs-symbol">:up</span>
+<span class="hljs-keyword">end</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <h2 id="let-s-play-">Let’s play!</h2>
+<p>Alright, everything’s in place. Let’s try some things!</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>First, get a repo to use.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>repo = Repositories::Articles.new(container)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>Let’s see if we have any published articles</p>
+<p>Nope, nothing. We’ve just created this table, after all!</p>
+<pre><code class="lang-ruby">repo.published
+<span class="hljs-comment"># =&gt; []</span>
+</code></pre>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>puts <span class="hljs-string">"Published articles?"</span>
+puts repo.published.inspect</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>It’s time to create an article then. We can do this via the repo too. rom-rb
+will give it back to us in a convenient struct for accessing the attributes
+of the new article.</p>
+<pre><code class="lang-ruby">repo.create(<span class="hljs-symbol">title:</span> <span class="hljs-string">"Hello rom-rb"</span>)
+<span class="hljs-comment"># =&gt; #&lt;ROM::Struct[Article] id=1 title="Hello rom-rb" published=false&gt;</span>
+</code></pre>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>first_article = repo.create(<span class="hljs-symbol">title:</span> <span class="hljs-string">"Hello rom-rb"</span>)
+puts <span class="hljs-string">"\nCreate an article:"</span>
+puts first_article.inspect</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>Can we fetch this article in a list? Not yet, because it’s not published.</p>
+<pre><code class="lang-ruby">repo.published
+<span class="hljs-comment"># =&gt; []</span>
+</code></pre>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>puts <span class="hljs-string">"\nPublished articles?"</span>
+puts repo.published.inspect</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>But we can find it by ID, because we’ve build our our repo’s <code>#[]</code> method to
+finds article regardless of published status.</p>
+<pre><code class="lang-ruby">repo[first_article.id]
+<span class="hljs-comment"># =&gt; #&lt;ROM::Struct[Article] id=1 title="Hello rom-rb" published=false&gt;</span>
+</code></pre>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>puts <span class="hljs-string">"\nFind first article by ID"</span>
+puts repo[first_article.id].inspect</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>Let’s create a published article now.</p>
+<pre><code class="lang-ruby">repo.create(<span class="hljs-symbol">title:</span> <span class="hljs-string">"Hello world"</span>, <span class="hljs-symbol">published:</span> <span class="hljs-literal">true</span>)
+<span class="hljs-comment"># =&gt; #&lt;ROM::Struct[Article] id=2 title="An alien or sutin" published=true&gt;</span>
+</code></pre>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>published_article = repo.create(<span class="hljs-symbol">title:</span> <span class="hljs-string">"An alien or sutin"</span>, <span class="hljs-symbol">published:</span> <span class="hljs-literal">true</span>)
+puts <span class="hljs-string">"\nCreate a published article:"</span>
+puts published_article.inspect</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>This article should be in our list now!</p>
+<pre><code class="lang-ruby">repo.published
+<span class="hljs-comment"># =&gt; [#&lt;ROM::Struct[Article] id=2 title="An alien or sutin" published=true&gt;]</span>
+</code></pre>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>puts <span class="hljs-string">"\nPublished articles?"</span>
+puts repo.published.inspect</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-26">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <h2 id="next-steps">Next steps</h2>
+<p>This is the end of our first little foray into the world of rom-rb. I hope
+you’ve enjoyed it! Next week we’ll look at a few more advanced features.</p>
+<p>Until then, if you can <a href="https://github.com/icelab/conversational-intro-to-rom-rb">clone this playground from GitHub</a> and
+experiment:</p>
+<pre><code>git clone https://github.com/icelab/conversational-intro-to-rom-rb
+cd conversational-intro-to-rom-rb
+bundle
+./intro.rb
+</code></pre><p>Feel free to extend the playground, make your own changes and see how things
+work!</p>
+<p>And if you want to learn more, check out the <a href="http://rom-rb.org/learn/">helpful documentation</a>
+on the rom-rb website, and join the <a href="https://gitter.im/rom-rb/chat">gitter chat</a> if you have any
+questions!</p>
+
+            </div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
