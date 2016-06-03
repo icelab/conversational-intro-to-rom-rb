@@ -97,7 +97,7 @@ end
 # ### Repositories
 #
 # Now, let's define a **Repository**. Repositories are the primary persistence
-# interfaces in our app. Responsitories contribute a couple of important things
+# interfaces in our app. Repositories contribute a couple of important things
 # to a well-designed app:
 #
 # 1. They hide low-level persistence details, ensuring the rest of our app
