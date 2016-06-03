@@ -161,6 +161,8 @@ ul.sections > li > div {
     border: 1px solid #dedede;
     font-size: 12px;
     padding: 0 0.2em;
+    /* Added to support scrolling code boxes in annotation area */
+    overflow: scroll;
   }
 }
 
