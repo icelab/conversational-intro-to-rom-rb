@@ -2,7 +2,7 @@
 
 # # A conversational introduction to rom-rb: part 2
 #
-# [_See all parts_](/) 
+# [_See all parts_](.)
 #
 # In [part 1](/part-1.html), we took our first steps with rom-rb, setting up
 # our basic persistence API and some repositories, then creating and reading

@@ -2,8 +2,8 @@
 #
 # An introduction to [rom-rb][rom-rb] in literate programming style. Learn rom-rb while seeing code and conversation side-by-side.
 #
-# - [**Part 1**](/part-1.html): Setup, relations, repositories and create commands
-# - [**Part 2**](/part-2.html): Types, associations, and update commands
+# - [**Part 1**](part-1.html): Setup, relations, repositories and create commands
+# - [**Part 2**](part-2.html): Types, associations, and update commands
 #
 # _Written by [Tim Riley][tw]._
 #
