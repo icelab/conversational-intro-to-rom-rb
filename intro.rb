@@ -2,7 +2,7 @@
 
 # # A conversational introduction to rom-rb: part 2
 #
-# [_See all parts_](.)
+# _[See all parts](.)_ · _[View the source][gh]_ · _[Follow the blog][blog]_ · _[Say hi on Twitter][tw]_
 #
 # In [part 1](/part-1.html), we took our first steps with rom-rb, setting up
 # our basic persistence API and some repositories, then creating and reading
@@ -10,6 +10,10 @@
 #
 # This time, we'll return query results in domain-specific objects, fetch
 # records with associations, and also look at updating records.
+#
+# [gh]: https://github.com/icelab/conversational-intro-to-rom-rb
+# [blog]: http://icelab.com.au/articles/conversational-rom-rb-part-2-types-associations-and-update-commands/
+# [tw]: http://twitter.com/timriley
 
 require "bundler/setup"
 require "rom-sql"
