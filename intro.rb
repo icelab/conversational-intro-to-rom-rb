@@ -1,89 +1,54 @@
 #!/usr/bin/env ruby
 
-# # A conversational introduction to rom-rb
+# # A conversational introduction to rom-rb: part 2
 #
-# _[View the source][gh]_ · _[Follow the blog][blog]_ · _[Say hi on Twitter][tw]_
+# [_See all parts_](/) 
 #
-# [gh]: https://github.com/icelab/conversational-intro-to-rom-rb
-# [blog]: http://icelab.com.au/articles/a-conversational-introduction-to-rom-rb/
-# [tw]: http://twitter.com/timriley
+# In [part 1](/part-1.html), we took our first steps with rom-rb, setting up
+# our basic persistence API and some repositories, then creating and reading
+# back records in our database.
 #
-# ### Persistence matters
-#
-# We've spent a few weeks now exploring a [next-generation web app
-# architecture][arch] for Ruby, but we're yet to cover one very important
-# thing: **database persistence**.
-#
-# How we choose to build our app's persistence support will have a profound
-# impact on its overall design.
-#
-# We could follow the active record pattern and wind up with a select few
-# models [deeply intertwined][ar] with every aspect of our application's
-# functionality.
-#
-# Or we could build a clean separation of responsibilities and make an app
-# that remains easy to change. **This is where [rom-rb][rom] can help.**
-#
-# [arch]: http://icelab.com.au/articles/a-change-positive-ruby-web-application-architecture/
-# [ar]: http://icelab.com.au/articles/inactive-records-the-value-objects-your-app-deserves/
-# [rom]: http://rom-rb.org/
-#
-# ### rom-rb helps
-#
-# rom-rb is a flexible persistence and data mapping toolkit for Ruby. It
-# separates queries and commands and offers [powerful, workable
-# abstractions][philosophy] at every point between our app and the data store.
-# This mean there are a few concepts to learn, but the payoff is significant:
-# a persistence layer that can be perfectly tailored to our app's needs.
-#
-# Let's get started, then: follow the code and commentary below for an
-# introduction to rom-rb and a playground for making your own experiments.
-#
-# [philosophy]: http://rom-rb.org/learn/introduction/philosophy/
-#
-# <hr>
+# this time, we'll return query results in domain-specific objects, fetch
+# records with associations, and also look at updating records.
 
-# ## Install the rom-rb gems
-
-# Over in the `Gemfile`, we're installing the rom-rb gems from their master
-# branches, since we'll be looking at some major improvements that are slated
-# for release later this month.
 require "bundler/setup"
-
-# Require the gems we need.
-#
-# One thing to note here is that rom-rb is a _multi-adapter_ toolkit. It
-# supports many kinds of data sources (and even allows you to use them
-# together!). For today, though we'll stick to SQL. Apart from the "rom-sql"
-# adapter, the only other `require` we need is "rom-repository", which will
-# act as our app's primary persistence interface.
 require "rom-sql"
 require "rom-repository"
 
+# We're pulling in one new dependency this time: dry-types. dry-types works
+# very well alongside rom-rb, and will allow us to build type-safe domain
+# entites from our database records.
+require "dry-types"
+
 # ## Define our app's persistence API
 #
-# In this playground, we'll be using rom-rb to work with _articles_ in our
-# database.
+# In part 1, we started with a simple articles relation and corresponding
+# database table. Now we'll expand things a little: we want our articles to
+# have many categories, so we'll add a categories relation and an
+# articles_categories relation to join the two.
 
-# ### Relations
-#
-# The first thing we need to define is a **Relation**. Relations are the
-# interface to a particular collection in our data source, which in SQL terms
-# is either a table or a view.
 module Relations
-  # This relation is for the `articles` table.
   class Articles < ROM::Relation[:sql]
-    # Define a canonical schema for this relation. This will be used when we
-    # use commands to make changes to our data. It ensures that only
-    # appropriate attributes are written through to the database table.
     schema(:articles) do
       attribute :id, Types::Serial
       attribute :title, Types::String
       attribute :published, Types::Bool
+
+      # We'll be using rom-rb's new `associate` API to make building these
+      # associations easy for us. Along with the `schema` API, this is new in
+      # rom-rb's master branches and will be released later in June.
+      #
+      # Basic usage of the `associate` API is wonderfully simple. All we need
+      # to do is declare the associations for this schema, and rom-rb will do
+      # the work to connect things for us.
+      #
+      # In this case, articles will have many categories through our
+      # articles_categories join table.
+      associate do
+        many :categories, through: :articles_categories
+      end
     end
 
-    # Define some composable, reusable query methods to return filtered
-    # results from our database table. We'll use them in a moment.
     def by_id(id)
       where(id: id)
     end
@@ -92,67 +57,175 @@ module Relations
       where(published: true)
     end
   end
+
+  # Our new Categories relation is straightforward: just an ID and a name.
+  class Categories < ROM::Relation[:sql]
+    schema(:categories) do
+      attribute :id, Types::Serial
+      attribute :name, Types::String
+    end
+  end
+
+  # Now let's join records from these tables together.
+  class ArticlesCategories < ROM::Relation[:sql]
+    schema(:articles_categories) do
+      attribute :id, Types::Serial
+
+      # The schema definition here has a couple of interesting things: these
+      # `ForeignKey` types. This is simply a way to leave some extra metadata
+      # on the type annotations so rom-rb can know to use these foreign key
+      # columns when it builds its associations.
+      #
+      # By default, rom-rb `ForeignKey` types are integers, but we can also
+      # provide specific types like this:
+      #
+      # ```ruby
+      # Types::ForeignKey(:articles, type: Types::String)
+      # ```
+      attribute :article_id, Types::ForeignKey(:articles)
+      attribute :category_id, Types::ForeignKey(:categories)
+
+      # And here we put these foreign keys to work by specifying the
+      # associations for this join table: each record belongs to both an
+      # article and a category.
+      associate do
+        belongs :articles
+        belongs :categories
+      end
+    end
+  end
 end
 
-# ### Repositories
+# ## Define our app's types
 #
-# Now, let's define a **Repository**. Repositories are the primary persistence
-# interfaces in our app. Repositories contribute a couple of important things
-# to a well-designed app:
+# Type safety and shareable type definitions are an important pillar of any
+# [dry-rb][dry-rb] app, and here we can get a little taste of it. We'll set up
+# entity classes to model the results coming out of our databases. Using [dry-
+# types][dry-types] structs here gives us a [number of benefits][benefits],
+# including:
 #
-# 1. They hide low-level persistence details, ensuring the rest of our app
-#    doesn't have any accidental or unnecessary coupling to the implementation
-#    details for our data source.
-# 2. They return objects that are appropriate for our app's domain. The data
-#    for these objects may come from one or more relations, may be transformed
-#    into a different shape, and may be returned as objects that are designed
-#    to be passed around the other components in our app.
-module Repositories
-  # This simple repository uses articles as its main relation.
-  class Articles < ROM::Repository[:articles]
-    # Define a command to create new articles.
-    commands :create
+# - Giving us a place to decorate the raw results from the database and
+#   provide any special behaviour important for our app.
+# - Making it easy for us to consume these objects in various contexts, since
+#   we can be 100% confident in the type of data they contain - a dry-types
+#   struct cannot be initialized with invalid attributes.
+#
+# We can also feel free to pass these objects all around our app, since by
+# convention we don't mutate them, and unlike objects coming from the active
+# record pattern, there's no way to trigger far-reaching side effects, like
+# datbase changes. These are also explicitly handled for us by rom-rb's
+# dedicated query and commands objects, which we would never us accidentally.
+#
+# [dry-rb]: http://dry-rb.org/
+# [dry-types]: http://dry-rb.org/gems/dry-types
+# [benefits]: http://icelab.com.au/articles/inactive-records-the-value-objects-your-app-deserves/
 
-    # Define methods to return the article objects we want to use within our
-    # app. Each of these can access the relation via `articles` and use its
-    # query methods.
+# The first thing we need to do with dry-types is to give our app a `Types`
+# module to include all of dry-type's out-of-the-box definitions, all the
+# basic Ruby types like strings, integers, etc.
+module Types
+  include Dry::Types.module
+end
+
+# Now we can refer to this types module when we set up our struct subclasses.
+# Our Category struct has attributes to contain each of the values we expect
+# to get from rows in its corresponding database table.
+class Category < Dry::Types::Struct
+  attribute :id, Types::Strict::Int
+  attribute :name, Types::Strict::String
+end
+
+# And Article is much the same, with one exception: we're going to fetch each
+# article along with all of its associated categories, so we set up a
+# categories attribute, which is an array of Category objects. Here we see how
+# we can actually _build_ upon our existing struct classes to provide quite
+# expressive, fully-featured type definitions.
+class Article < Dry::Types::Struct
+  attribute :id, Types::Strict::Int
+  attribute :title, Types::Strict::String
+  attribute :published, Types::Strict::Bool
+
+  attribute :categories, Types::Strict::Array.member(Category)
+end
+
+# ## Define our app's repositories
+#
+# With these types in place, we can revisit our repositories. One thing to
+# note here is that, within this script, these repositories have now moved a
+# little _further away_ from the relations that they use. This is actually a
+# fairer representation of how they should sit within a larger app:
+# repositories are not part of the basic persistence layer, but are rather a
+# way for your app to _hide away_ the nitty-gritty details of persistence. In
+# this way, they're part of your app's collection of core objects.
+#
+# We'll take this a step further today by configuring these repositories to
+# return results wrapped up in the domain entities we defined just above.
+
+module Repositories
+  # While we've added 3 extra relations above, we'll still be keeping only one
+  # repository, which is another reflection of the different roles these two
+  # things serve. Repositories are the sole interfaces through which our apps
+  # work with persisted data, and in the case of this playground, all we need
+  # to get are articles.
+  class Articles < ROM::Repository[:articles]
+    # This repository can already access its root articles relation. Now we
+    # need to make the categories relation accessible to it, so it can take
+    # care of the association of articles to categories.
+    relations :categories
+
+    # We're also adding one new command to the repository: `update`, combining
+    # it with a `by_id` _restriction_. `by_id` is the query method we defined
+    # in the articles relation, and it means here that the update command will
+    # require an article ID to be provided, to ensure we only update a single
+    # record and not every article in our database!
+    commands :create, update: :by_id
+
+    # We're making 2 important changes to both of our repo's query methods:
     #
-    # Unlike the query methods inside the relations, these ones should not be
-    # chainable. Their purpose is to return a set of articles for each
-    # distinct use case within our app. This means that our repository API
-    # (and therefore our persistence API in general) is a perfect reflection
-    # of our app's persistence requirements.
+    # Firstly, we're adding `aggregate(:categories)`, which will combine each
+    # article result with all of its categories, using the associations we
+    # declared back up in the relations.
+    #
+    # Then we're adding `.as(Article)`, which will see the data from each of
+    # the results being passed to the constructor of our `Article` class.
+    # Because this class is already configured to expect an array of
+    # categories attributes, it will receive all the information it needs to
+    # be initialized with valid data.
     def [](id)
-      articles.by_id(id).one!
+      aggregate(:categories)
+        .by_id(id)
+        .as(Article)
+        .one!
     end
 
     def published
-      articles.published.to_a
+      aggregate(:categories)
+        .published
+        .as(Article)
+        .to_a
     end
   end
 end
 
 # ## Initialize rom-rb
 #
-# rom-rb is built to be non-intrusive. When we initialize it here, all our
-# relations and commands are bundled into a single container that we can
-# inject into our app.
-#
-# In any kind of framework, this setup will be taken care of for us, but
-# because rom-rb is flexible, explicit setup for our playground is still nice
-# and easy.
-
-# Configure rom-rb to use an in-memory SQLite database via its SQL adapter,
-# register our articls relation, then build and finalize the persistence
-# container.
+# We're registering our two extra relations here. Again, this is something
+# that would be taken care of for us when using rom-rb in a larger app, but
+# it's nice that rom-rb gives us all the setup hooks we need to make a little
+# playground script like this work too.
 config = ROM::Configuration.new(:sql, "sqlite::memory")
 config.register_relation Relations::Articles
+config.register_relation Relations::Categories
+config.register_relation Relations::ArticlesCategories
 container = ROM.container(config)
 
 # ## Prepare our database
 #
-# Since this is a standalone playground, run a migration to give us a database
-# table to work with.
+# We're adding the migrations for our two extra tables here, and using the
+# `foreign_key` support from [Sequel's migration API][fk] for proper database
+# integrity.
+#
+# [fk]: http://sequel.jeremyevans.net/rdoc/files/doc/schema_modification_rdoc.html#label-foreign_key
 container.gateways[:default].tap do |gateway|
   migration = gateway.migration do
     change do
@@ -161,6 +234,17 @@ container.gateways[:default].tap do |gateway|
         string :title, null: false
         boolean :published, null: false, default: false
       end
+
+      create_table :categories do
+        primary_key :id
+        string :name, null: false
+      end
+
+      create_table :articles_categories do
+        primary_key :id
+        foreign_key :article_id, :articles, null: false
+        foreign_key :category_id, :categories, null: false
+      end
     end
   end
   migration.apply gateway.connection, :up
@@ -168,76 +252,56 @@ end
 
 # ## Let's play!
 #
-# Alright, everything's in place. Let's try some things!
+# Alright, everything's in place. Let's try out these changes!
+
 
 # First, get a repo to use.
 repo = Repositories::Articles.new(container)
 
-# Let's see if we have any published articles
+# Let's just manually seed our database with some data. We need to make some
+# articles, categories and their associations via the join table. Next week
+# we'll look at how we can do this nicely with rom-rb, but for now  we need to
+# sneak in a couple of lines of SQL.
+repo.create(title: "Hello rom-rb", published: true)
+
+connection = container.gateways[:default].connection
+connection.execute "INSERT INTO categories (name) VALUES ('dry-rb')"
+connection.execute "INSERT INTO categories (name) VALUES ('rom-rb')"
+connection.execute "INSERT INTO articles_categories (article_id, category_id) VALUES (1, 1)"
+connection.execute "INSERT INTO articles_categories (article_id, category_id) VALUES (1, 2)"
+
+# Now we should be able to see some results.
 #
-# Nope, nothing. We've just created this table, after all!
+# And look! Here we are: our article, wrapped up in a proper domain object,
+# including both of its associated categories:
 #
 # ```ruby
 # repo.published
-# # => []
+# # => [#<Article id=1 title="Hello rom-rb" published=true categories=[#<Category id=1 name="dry-rb">, #<Category id=2 name="rom-rb">]>]
 # ```
 puts "Published articles?"
-puts repo.published.inspect
+published_articles = repo.published
+puts published_articles.inspect
 
-# It's time to create an article then. We can do this via the repo too. rom-rb
-# will give it back to us in a convenient struct for accessing the attributes
-# of the new article.
+# And with our repo's new `update` command, we should be able to modify that
+# article.
+repo.update(published_articles.first.id, title: "rom-rb and dry-rb, sitting in a tree")
+
+# Has it worked? Yes!
 #
 # ```ruby
-# repo.create(title: "Hello rom-rb")
-# # => #<ROM::Struct[Article] id=1 title="Hello rom-rb" published=false>
+# repo.published.first.title
+# # => "rom-rb and dry-rb, sitting in a tree"
 # ```
-first_article = repo.create(title: "Hello rom-rb")
-puts "\nCreate an article:"
-puts first_article.inspect
-
-# Can we fetch this article in a list? Not yet, because it's not published.
-#
-# ```ruby
-# repo.published
-# # => []
-# ```
-puts "\nPublished articles?"
-puts repo.published.inspect
-
-# But we can find it by ID, because we've built our repo's `#[]` method to
-# find an article regardless of published status.
-#
-# ```ruby
-# repo[first_article.id]
-# # => #<ROM::Struct[Article] id=1 title="Hello rom-rb" published=false>
-# ```
-puts "\nFind first article by ID"
-puts repo[first_article.id].inspect
-
-# Let's create a published article now.
-#
-# ```ruby
-# repo.create(title: "Hello world", published: true)
-# # => #<ROM::Struct[Article] id=2 title="An alien or sutin" published=true>
-# ```
-published_article = repo.create(title: "An alien or sutin", published: true)
-puts "\nCreate a published article:"
-puts published_article.inspect
-
-# This article should be in our list now!
-#
-# ```ruby
-# repo.published
-# # => [#<ROM::Struct[Article] id=2 title="An alien or sutin" published=true>]
-# ```
-puts "\nPublished articles?"
-puts repo.published.inspect
+puts "Updated title?"
+puts repo.published.first.title.inspect
 
 # ## Next steps
 #
-# This is the end of our first little foray into the world of rom-rb. I hope
-# you've enjoyed it! Next week we'll look at a few more advanced features.
+# We've seen a few more features of the upcoming rom-rb release, but our
+# journey isn't complete. We'll come back for one more part, in which we'll
+# look at a command graph to create both articles and categories at the same
+# time.
 #
 # Until then, if you can [clone this playground from GitHub][gh] and
 # experiment:
