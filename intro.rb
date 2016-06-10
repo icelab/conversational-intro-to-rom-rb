@@ -117,8 +117,8 @@ end
 # We can also feel free to pass these objects all around our app, since by
 # convention we don't mutate them, and unlike objects coming from the active
 # record pattern, there's no way to trigger far-reaching side effects, like
-# datbase changes. These are also explicitly handled for us by rom-rb's
-# dedicated query and commands objects, which we would never us accidentally.
+# database changes. These are also explicitly handled for us by rom-rb's
+# dedicated query and commands objects, which we would never use accidentally.
 #
 # [dry-rb]: http://dry-rb.org/
 # [dry-types]: http://dry-rb.org/gems/dry-types
