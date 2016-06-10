@@ -2,7 +2,7 @@
 
 # # A conversational introduction to rom-rb
 #
-# _[View the source][gh]_ · _[Follow the blog][blog]_ · _[Say hi on Twitter][tw]_
+# _[See all parts](.)_ · _[View the source][gh]_ · _[Follow the blog][blog]_ · _[Say hi on Twitter][tw]_
 #
 # [gh]: https://github.com/icelab/conversational-intro-to-rom-rb
 # [blog]: http://icelab.com.au/articles/a-conversational-introduction-to-rom-rb/
