@@ -4,7 +4,7 @@
 #
 # _[See all parts](.)_ · _[View the source][gh]_ · _[Follow the blog][blog]_ · _[Say hi on Twitter][tw]_
 #
-# In [part 1](/part-1.html), we took our first steps with rom-rb, setting up
+# In [part 1](part-1.html), we took our first steps with rom-rb, setting up
 # our basic persistence API and some repositories, then creating and reading
 # back records in our database.
 #
