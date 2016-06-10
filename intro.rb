@@ -8,7 +8,7 @@
 # our basic persistence API and some repositories, then creating and reading
 # back records in our database.
 #
-# this time, we'll return query results in domain-specific objects, fetch
+# This time, we'll return query results in domain-specific objects, fetch
 # records with associations, and also look at updating records.
 
 require "bundler/setup"
